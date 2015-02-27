@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
 
 /*
@@ -51,17 +52,23 @@ led_show_number(int n)
 }
 
 void
+led_show_dot()
+{
+	PORTD = 1 << 0 | 1 << 1 | 1 << 3 |  1 << 4 | 1 << 5 | 1 << 6 | 1 << 7;
+}
+
+void
 blink_leds()
 {
 	int i;
 
 	for (i = 0; i < 20; i++) {
-		/* clear all leds */
+		/* enable all leds */
 		PORTD = 0x00;
-		_delay_ms(60);
+		_delay_ms(50);
 		/* clear all leds */
 		PORTD = 0xff;
-		_delay_ms(60);
+		_delay_ms(50);
 	}
 }
 
@@ -74,11 +81,18 @@ main(void)
 	/* read from DDR C */
 	DDRC = 0x00;
 
+	/* enable interrupts */
+	sei();
+
+	TCCR1B |= 1 << CS10 | 1 << CS11 | 1 << WGM12;
+	TIMSK |= 1 << OCIE1A;
+	OCR1A = 15624;
+
 	for (;;) {
 		for (i = 0; i < 10; i++) {
 			if (bit_is_clear(PINC, 0)) {
 				led_show_number(i);
-				_delay_ms(500);
+				_delay_ms(1000);
 			} else {
 				/* motion detected */
 				blink_leds();
@@ -87,4 +101,9 @@ main(void)
     }
 
     return (0);
+}
+
+ISR(TIMER1_COMPA_vect)
+{
+	led_show_dot();
 }
